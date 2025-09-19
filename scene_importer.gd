@@ -15,6 +15,9 @@ var import_models_path: String = ""
 func _get_import_options(path: String) -> void:
 	import_filepath = path
 	import_path = import_filepath.get_base_dir()
+	# Reset caches for new file import
+	_meshes_path = ""
+	_materials_path = ""
 
 func _pre_process(scene: Node) -> void:
 	for base_path in ASSET_PATHS:
