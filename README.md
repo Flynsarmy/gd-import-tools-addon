@@ -19,6 +19,7 @@ During import:
 
 ## Usage
 
+- `git clone` into *addons/import_tools*
 - Enable the *Import Tools* addon.
 - Set up the following folder structure:
   > Assets
