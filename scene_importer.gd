@@ -55,6 +55,9 @@ func _post_process(scene: Node) -> void:
 	# - Roads
 	if import_path == ("%s/Roads" % import_models_path):
 		scene = ImportSceneTransformerRoads.new().transform(scene)
+	# - Removes Node3D parent from scenes that are just a single MeshInstance3D (with optional StaticBody3D children)
+	else:
+		scene = ImportSceneTransformerMeshInstanceRoots.new().transform(scene)
 
 	# Save the prefab if this file
 	var packed: PackedScene = PackedScene.new()
