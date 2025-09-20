@@ -51,17 +51,22 @@ func _post_process(scene: Node) -> void:
 	if not DirAccess.dir_exists_absolute(abs_path):
 		DirAccess.make_dir_recursive_absolute(abs_path)
 
+	# `scene` is passed by reference and manipulating its children will change the GLB scene but
+	# setting new node owners doesn't work correctly and the GLB scene will lose its children.
+	# Create a separate `prefab_scene` for our prefab.
+	var prefab_scene: Node = scene.duplicate()
+
 	# Scene Transformers
 	# - Roads
 	if import_path == ("%s/Roads" % import_models_path):
-		scene = ImportSceneTransformerRoads.new().transform(scene)
+		prefab_scene = ImportSceneTransformerRoads.new().transform(prefab_scene)
 	# - Removes Node3D parent from scenes that are just a single MeshInstance3D (with optional StaticBody3D children)
 	else:
-		scene = ImportSceneTransformerMeshInstanceRoots.new().transform(scene)
+		prefab_scene = ImportSceneTransformerMeshInstanceRoots.new().transform(prefab_scene)
 
 	# Save the prefab if this file
 	var packed: PackedScene = PackedScene.new()
-	var error_code: Error = packed.pack(scene)
+	var error_code: Error = packed.pack(prefab_scene)
 	if error_code != OK:
 		push_error("Failed to pack scene %s. Error code %s." % [import_filepath, error_code])
 		return
