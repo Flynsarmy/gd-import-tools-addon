@@ -18,6 +18,8 @@ func _get_import_options(path: String) -> void:
 	# Reset caches for new file import
 	_meshes_path = ""
 	_materials_path = ""
+	_animations_path = ""
+	import_models_path = ""
 
 func _pre_process(scene: Node) -> void:
 	for base_path in ASSET_PATHS:
@@ -29,6 +31,8 @@ func _pre_process(scene: Node) -> void:
 				subresources['meshes'] = {}
 			if not subresources.has('materials'):
 				subresources['materials'] = {}
+			if not subresources.has('animations'):
+				subresources['animations'] = {}
 
 			save_resources(scene, subresources)
 			break
@@ -64,6 +68,9 @@ func _post_process(scene: Node) -> void:
 	else:
 		prefab_scene = ImportSceneTransformerMeshInstanceRoots.new().transform(prefab_scene)
 
+	# Not sure why this is necessary but it is or only the root node will save.
+	recursively_reparent(prefab_scene, prefab_scene)
+
 	# Save the prefab if this file
 	var packed: PackedScene = PackedScene.new()
 	var error_code: Error = packed.pack(prefab_scene)
@@ -77,6 +84,12 @@ func _post_process(scene: Node) -> void:
 		)
 		return
 
+# Recursively iterate through a scene replacing each node's owner with the given Node
+func recursively_reparent(node: Node, owner: Node) -> void:
+	for child in node.get_children():
+		child.owner = owner
+		recursively_reparent(child, owner)
+
 # Iterate through a pre-process scene tree saving out meshes, materials etc
 func save_resources(node: Node, subresources: Dictionary) -> void:
 	if node is ImporterMeshInstance3D:
@@ -86,6 +99,10 @@ func save_resources(node: Node, subresources: Dictionary) -> void:
 		for index in mesh.get_surface_count():
 			var material: Material = mesh.get_surface_material(index)
 			set_material_import_path(material, subresources)
+	elif node is AnimationPlayer:
+		for anim_name in node.get_animation_list():
+			var animation: Animation = node.get_animation(anim_name)
+			set_animation_import_path(animation, subresources)
 
 	for child in node.get_children():
 		save_resources(child, subresources)
@@ -95,6 +112,13 @@ func set_mesh_import_path(resource: ImporterMesh, subresources: Dictionary) -> v
 	subresources['meshes'][resource.resource_name] = {
 		'save_to_file/enabled': true,
 		'save_to_file/path': "%s/%s.res" % [_get_abs_meshes_path(), resource.resource_name]
+	}
+
+func set_animation_import_path(resource: Animation, subresources: Dictionary) -> void:
+	subresources['animations'][resource.resource_name] = {
+		'save_to_file/enabled': true,
+		'save_to_file/keep_custom_tracks': true,
+		'save_to_file/path': "%s/%s.res" % [_get_abs_animations_path(), resource.resource_name]
 	}
 
 # Sets the 'use external' path for Materials. This will be reflected in the Advanced Import window.
@@ -154,3 +178,16 @@ func _get_abs_materials_path() -> String:
 		_materials_path = abs_path
 
 	return _materials_path
+
+# Returns "MODELS_BASEPATH/Meshes". This will be an absolute folder path.
+var _animations_path: String = ""
+func _get_abs_animations_path() -> String:
+	if _animations_path.length() == 0:
+		# Get the import_filepath/meshes dir
+		var abs_path: String = "%s/Animations" % import_path
+		# Create it if it doesn't exist
+		if not DirAccess.dir_exists_absolute(abs_path):
+			DirAccess.make_dir_recursive_absolute(abs_path)
+		_animations_path = abs_path
+
+	return _animations_path
